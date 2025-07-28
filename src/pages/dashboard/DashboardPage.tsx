@@ -12,7 +12,6 @@ import RevenueChart from "../../components/dashboard/RevenueChart";
 import BookingsChart from "../../components/dashboard/BookingsChart";
 import { getProviderMandaps } from "../../services/mandapApi";
 import { getBookingsByProvider } from "../../services/bookingApi";
-import { getDashboardAnalytics, getMonthlyChartData } from "../../services/dashboardApi";
 
 const DashboardPage: React.FC = () => {
   const [mandaps, setMandaps] = useState([]);
