@@ -53,7 +53,7 @@ export const getAllReviewsByProvider = async () => {
 
 export const getReviewById = async (reviewId) => {
   try {
-    const response = await api.get(`/review/${reviewId}`);
+    const response = await api.get(`/user/review/${reviewId}`);
     return response.data.data.review;
   } catch (error) {
     return null;
