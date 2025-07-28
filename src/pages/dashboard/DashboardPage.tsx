@@ -35,7 +35,7 @@ const DashboardPage: React.FC = () => {
         getProviderMandaps(),
         getBookingsByProvider(1, 10), // Get recent 10 bookings
         getDashboardAnalytics(),
-        getMonthlyChartData()
+       
       ]);
 
       setMandaps(mandapsData);
