@@ -86,7 +86,7 @@ export const createMandap = async (
 
 export const getProviderMandaps = async () => {
   try {
-    const response = await api.get("/provider/get-mandap");
+    const response = await api.get("/get-mandap");
     return response.data.data.mandaps || [];
   } catch (error) {
     return [];
