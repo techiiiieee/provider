@@ -2,7 +2,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { getProviderToken } from "../utils/providerCookieUtils";
 
-const BASE_URL = "http://localhost:4000/api";
+const BASE_URL = "http://localhost:4000/api/provider";
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -110,7 +110,7 @@ export const updateMandap = async (mandapId, mandapData, venueImages) => {
 };
 
 export const deleteMandap = async (mandapId) => {
-  const response = await api.delete(`/provider/delete-mandap/${mandapId}`);
+  const response = await api.delete(`/delete-mandap/${mandapId}`);
   return response.data;
 };
 
