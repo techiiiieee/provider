@@ -34,7 +34,7 @@ const DashboardPage: React.FC = () => {
       const [mandapsData, bookingsData, analyticsData, chartData] = await Promise.all([
         getProviderMandaps(),
         getBookingsByProvider(1, 10), // Get recent 10 bookings
-        getDashboardAnalytics(),
+        
        
       ]);
 
