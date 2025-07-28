@@ -6,22 +6,40 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
-import { bookings } from '../../utils/mock-data';
+import { getBookingsByProvider } from '../../services/bookingApi';
 import { format } from 'date-fns';
 
 const PaymentsPage: React.FC = () => {
+  const [bookings, setBookings] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [sortField, setSortField] = useState('startDate');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [loading, setLoading] = useState(true);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const bookingsData = await getBookingsByProvider();
+      setBookings(bookingsData);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
   
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'Completed':
         return 'bg-success-50 text-success-700';
-      case 'partial':
+      case 'Partial':
         return 'bg-warning-50 text-warning-700';
-      case 'pending':
+      case 'Pending':
         return 'bg-error-50 text-error-700';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -44,29 +62,33 @@ const PaymentsPage: React.FC = () => {
   
   // Calculate total received payments
   const totalReceived = bookings.reduce((sum, booking) => {
-    if (booking.paymentStatus === 'completed') {
-      return sum + booking.totalAmount;
-    } else if (booking.paymentStatus === 'partial') {
-      return sum + (booking.totalAmount * 0.5); // Assuming 50% for partial payments
+    if (booking.paymentStatus === 'Completed') {
+      return sum + booking.amountPaid;
+    } else if (booking.paymentStatus === 'Partial') {
+      return sum + booking.amountPaid;
     }
     return sum;
   }, 0);
   
   // Calculate total pending payments
   const totalPending = bookings.reduce((sum, booking) => {
-    if (booking.paymentStatus === 'pending') {
+    if (booking.paymentStatus === 'Pending') {
       return sum + booking.totalAmount;
-    } else if (booking.paymentStatus === 'partial') {
-      return sum + (booking.totalAmount * 0.5); // Assuming 50% for partial payments
+    } else if (booking.paymentStatus === 'Partial') {
+      return sum + (booking.totalAmount - booking.amountPaid);
     }
     return sum;
   }, 0);
   
   const filteredBookings = bookings
     .filter(booking => {
-      const matchesSearch = booking.mandapName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           booking.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           booking.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      const mandapName = booking.mandapId?.mandapName || '';
+      const customerName = booking.userId?.name || '';
+      const customerEmail = booking.userId?.email || '';
+      
+      const matchesSearch = mandapName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
       
       if (filter === 'all') return matchesSearch;
       if (filter === booking.paymentStatus) return matchesSearch;
@@ -77,14 +99,14 @@ const PaymentsPage: React.FC = () => {
       let comparison = 0;
       
       switch (sortField) {
-        case 'startDate':
-          comparison = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        case 'createdAt':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
-        case 'customerName':
-          comparison = a.customerName.localeCompare(b.customerName);
+        case 'userId.name':
+          comparison = (a.userId?.name || '').localeCompare(b.userId?.name || '');
           break;
-        case 'mandapName':
-          comparison = a.mandapName.localeCompare(b.mandapName);
+        case 'mandapId.mandapName':
+          comparison = (a.mandapId?.mandapName || '').localeCompare(b.mandapId?.mandapName || '');
           break;
         case 'totalAmount':
           comparison = a.totalAmount - b.totalAmount;
@@ -95,6 +117,14 @@ const PaymentsPage: React.FC = () => {
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -147,9 +177,9 @@ const PaymentsPage: React.FC = () => {
             <Select
               options={[
                 { value: 'all', label: 'All Payments' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'partial', label: 'Partial' },
-                { value: 'pending', label: 'Pending' },
+                { value: 'Completed', label: 'Completed' },
+                { value: 'Partial', label: 'Partial' },
+                { value: 'Pending', label: 'Pending' },
               ]}
               value={filter}
               onChange={setFilter}
@@ -169,29 +199,29 @@ const PaymentsPage: React.FC = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-500">ID</th>
                   <th 
                     className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer"
-                    onClick={() => handleSort('mandapName')}
+                    onClick={() => handleSort('mandapId.mandapName')}
                   >
                     <div className="flex items-center">
                       Mandap
-                      {sortIcon('mandapName')}
+                      {sortIcon('mandapId.mandapName')}
                     </div>
                   </th>
                   <th 
                     className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer"
-                    onClick={() => handleSort('customerName')}
+                    onClick={() => handleSort('userId.name')}
                   >
                     <div className="flex items-center">
                       Customer
-                      {sortIcon('customerName')}
+                      {sortIcon('userId.name')}
                     </div>
                   </th>
                   <th 
                     className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer"
-                    onClick={() => handleSort('startDate')}
+                    onClick={() => handleSort('createdAt')}
                   >
                     <div className="flex items-center">
                       Booking Date
-                      {sortIcon('startDate')}
+                      {sortIcon('createdAt')}
                     </div>
                   </th>
                   <th 
@@ -210,18 +240,18 @@ const PaymentsPage: React.FC = () => {
               <tbody>
                 {filteredBookings.map((booking) => (
                   <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-4 font-medium">#{booking.id}</td>
-                    <td className="px-4 py-4">{booking.mandapName}</td>
+                    <td className="px-4 py-4 font-medium">#{booking._id?.slice(-6)}</td>
+                    <td className="px-4 py-4">{booking.mandapId?.mandapName || 'N/A'}</td>
                     <td className="px-4 py-4">
                       <div>
-                        <p className="font-medium">{booking.customerName}</p>
-                        <p className="text-xs text-gray-500">{booking.customerEmail}</p>
+                        <p className="font-medium">{booking.userId?.name || 'N/A'}</p>
+                        <p className="text-xs text-gray-500">{booking.userId?.email || 'N/A'}</p>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                        <span>{format(new Date(booking.startDate), 'dd MMM yyyy')}</span>
+                        <span>{format(new Date(booking.createdAt), 'dd MMM yyyy')}</span>
                       </div>
                     </td>
                     <td className="px-4 py-4 font-medium">₹{booking.totalAmount.toLocaleString()}</td>
@@ -231,7 +261,7 @@ const PaymentsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      {booking.paymentStatus !== 'completed' && (
+                      {booking.paymentStatus !== 'Completed' && (
                         <Button
                           size="sm"
                           variant="secondary"
@@ -240,7 +270,7 @@ const PaymentsPage: React.FC = () => {
                           Record Payment
                         </Button>
                       )}
-                      {booking.paymentStatus === 'completed' && (
+                      {booking.paymentStatus === 'Completed' && (
                         <Button
                           size="sm"
                           variant="ghost"

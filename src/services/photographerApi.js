@@ -1,10 +1,10 @@
 import axios from "axios";
 import toast from "react-hot-toast";
-import { getProviderToken } from "./providerCookieUtils";
+import { getProviderToken } from "../utils/providerCookieUtils";
 
 const BASE_URL = "http://localhost:4000/api";
 
-const providerApi = axios.create({
+const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
   headers: {
@@ -12,7 +12,7 @@ const providerApi = axios.create({
   },
 });
 
-providerApi.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const providerToken = getProviderToken();
   if (providerToken) {
     config.headers.Authorization = `Bearer ${providerToken}`;
@@ -23,15 +23,11 @@ providerApi.interceptors.request.use((config) => {
   return config;
 });
 
-providerApi.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("Photographer API Error:", error.response || error.message);
-    if (error.response?.data?.error) {
-      toast.error(error.response.data.error);
-    } else if (error.message) {
-      toast.error("Network error. Please try again.");
-    }
+    // Don't show toast for network errors as requested
     return Promise.reject(error);
   }
 );
@@ -49,17 +45,30 @@ export const addPhotographer = async (
   if (sampleWork && Array.isArray(sampleWork)) {
     sampleWork.forEach((file) => formData.append("sampleWork", file));
   }
-  const response = await api.post("/add-photographer", formData);
+  const response = await api.post("/provider/add-photographer", formData);
   return response.data;
+};
+
+export const getAllPhotographers = async () => {
+  try {
+    const response = await api.get("/provider/get-all-photographers");
+    return response.data.data.photographers || [];
+  } catch (error) {
+    return [];
+  }
 };
 
 export const getPhotographers = async (mandapId) => {
-  const response = await api.get(`/get-all-photographers/${mandapId}`);
-  return response.data;
+  try {
+    const response = await api.get(`/provider/get-all-photographer/${mandapId}`);
+    return response.data.data.photographers || [];
+  } catch (error) {
+    return [];
+  }
 };
 
 export const getPhotographerById = async (photographerId) => {
-  const response = await api.get(`/get-photographer/${photographerId}`);
+  const response = await api.get(`/provider/get-photographer/${photographerId}`);
   return response.data;
 };
 
@@ -77,13 +86,13 @@ export const updatePhotographer = async (
     sampleWork.forEach((file) => formData.append("sampleWork", file));
   }
   const response = await api.put(
-    `/update-photographer/${photographerId}`,
+    `/provider/update-photographer/${photographerId}`,
     formData
   );
   return response.data;
 };
 
 export const deletePhotographer = async (photographerId) => {
-  const response = await api.delete(`/delete-photographer/${photographerId}`);
+  const response = await api.delete(`/provider/delete-photographer/${photographerId}`);
   return response.data;
 };

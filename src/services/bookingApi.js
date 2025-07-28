@@ -4,7 +4,7 @@ import { getProviderToken } from "./providerCookieUtils";
 
 const BASE_URL = "http://localhost:4000/api";
 
-const providerApi = axios.create({
+const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
   headers: {
@@ -12,7 +12,7 @@ const providerApi = axios.create({
   },
 });
 
-providerApi.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const providerToken = getProviderToken();
   if (providerToken) {
     config.headers.Authorization = `Bearer ${providerToken}`;
@@ -23,25 +23,46 @@ providerApi.interceptors.request.use((config) => {
   return config;
 });
 
-providerApi.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("Caterer API Error:", error.response || error.message);
-    if (error.response?.data?.error) {
-      toast.error(error.response.data.error);
-    } else if (error.message) {
-      toast.error("Network error. Please try again.");
-    }
+    console.error("Booking API Error:", error.response || error.message);
+    // Don't show toast for network errors as requested
     return Promise.reject(error);
   }
 );
 // Booking APIs
-export const getBookingsByProvider = async () => {
-  const response = await api.get("/bookings");
-  return response.data;
+export const getBookingsByProvider = async (page = 1, limit = 10) => {
+  try {
+    const response = await api.get(`/provider/bookings?page=${page}&limit=${limit}`);
+    return response.data.data.bookings || [];
+  } catch (error) {
+    return [];
+  }
 };
 
 export const getBookingById = async (bookingId) => {
-  const response = await api.get(`/booking/get-booking/${bookingId}`);
+  try {
+    const response = await api.get(`/booking/${bookingId}`);
+    return response.data.data.booking;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const updateBooking = async (bookingId, bookingData) => {
+  const response = await api.put(`/booking/${bookingId}`, bookingData);
+  return response.data;
+};
+
+export const deleteBooking = async (bookingId) => {
+  const response = await api.delete(`/booking/${bookingId}`);
+  return response.data;
+};
+
+export const completePayment = async (bookingId, paymentAmount) => {
+  const response = await api.post(`/booking/complete-payment/${bookingId}`, {
+    paymentAmount
+  });
   return response.data;
 };

@@ -1,10 +1,10 @@
 import axios from "axios";
 import toast from "react-hot-toast";
-import { getProviderToken } from "./providerCookieUtils";
+import { getProviderToken } from "../utils/providerCookieUtils";
 
 const BASE_URL = "http://localhost:4000/api";
 
-const providerApi = axios.create({
+const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
   headers: {
@@ -12,7 +12,7 @@ const providerApi = axios.create({
   },
 });
 
-providerApi.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const providerToken = getProviderToken();
   if (providerToken) {
     config.headers.Authorization = `Bearer ${providerToken}`;
@@ -23,15 +23,11 @@ providerApi.interceptors.request.use((config) => {
   return config;
 });
 
-providerApi.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("Caterer API Error:", error.response || error.message);
-    if (error.response?.data?.error) {
-      toast.error(error.response.data.error);
-    } else if (error.message) {
-      toast.error("Network error. Please try again.");
-    }
+    // Don't show toast for network errors as requested
     return Promise.reject(error);
   }
 );
@@ -59,8 +55,17 @@ export const addCaterer = async (
     formData.append("customizableItems", JSON.stringify(customizableItems));
   formData.append("hasTastingSession", hasTastingSession);
   if (categoryImage) formData.append("categoryImage", categoryImage);
-  const response = await api.post("/add-caterer", formData);
+  const response = await api.post("/provider/add-caterer", formData);
   return response.data;
+};
+
+export const getAllCaterers = async () => {
+  try {
+    const response = await api.get("/provider/get-all-caterers");
+    return response.data.data.caterers || [];
+  } catch (error) {
+    return [];
+  }
 };
 
 export const updateCaterer = async (catererId, catererData, categoryImage) => {
@@ -76,21 +81,21 @@ export const updateCaterer = async (catererId, catererData, categoryImage) => {
     }
   });
   if (categoryImage) formData.append("categoryImage", categoryImage);
-  const response = await api.put(`/update-caterer/${catererId}`, formData);
+  const response = await api.put(`/provider/update-caterer/${catererId}`, formData);
   return response.data;
 };
 
 export const deleteCaterer = async (catererId) => {
-  const response = await api.delete(`/delete-caterer/${catererId}`);
+  const response = await api.delete(`/provider/delete-caterer/${catererId}`);
   return response.data;
 };
 
 export const getCatererById = async (catererId) => {
-  const response = await api.get(`/get-caterer/${catererId}`);
+  const response = await api.get(`/provider/get-caterer/${catererId}`);
   return response.data;
 };
 
 export const getCaterersByMandapId = async (mandapId) => {
-  const response = await api.get(`/get-all-caterers/${mandapId}`);
+  const response = await api.get(`/provider/get-all-caterer/${mandapId}`);
   return response.data;
 };

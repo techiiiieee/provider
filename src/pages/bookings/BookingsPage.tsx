@@ -6,15 +6,32 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
-import { bookings as initialBookings } from '../../utils/mock-data';
+import { getBookingsByProvider } from '../../services/bookingApi';
 import { format } from 'date-fns';
 
 const BookingsPage: React.FC = () => {
-  const [bookings, setBookings] = useState(initialBookings);
+  const [bookings, setBookings] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [sortField, setSortField] = useState('startDate');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [loading, setLoading] = useState(true);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const bookingsData = await getBookingsByProvider();
+      setBookings(bookingsData);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,12 +92,16 @@ const BookingsPage: React.FC = () => {
   
   const filteredBookings = bookings
     .filter(booking => {
-      const matchesSearch = booking.mandapName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           booking.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           booking.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      const mandapName = booking.mandapId?.mandapName || '';
+      const customerName = booking.userId?.name || '';
+      const customerEmail = booking.userId?.email || '';
+      
+      const matchesSearch = mandapName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
       
       if (filter === 'all') return matchesSearch;
-      if (filter === booking.status) return matchesSearch;
+      if (filter === booking.paymentStatus) return matchesSearch;
       if (filter === `payment-${booking.paymentStatus}`) return matchesSearch;
       
       return false;
@@ -89,14 +110,14 @@ const BookingsPage: React.FC = () => {
       let comparison = 0;
       
       switch (sortField) {
-        case 'startDate':
-          comparison = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        case 'createdAt':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
-        case 'customerName':
-          comparison = a.customerName.localeCompare(b.customerName);
+        case 'userId.name':
+          comparison = (a.userId?.name || '').localeCompare(b.userId?.name || '');
           break;
-        case 'mandapName':
-          comparison = a.mandapName.localeCompare(b.mandapName);
+        case 'mandapId.mandapName':
+          comparison = (a.mandapId?.mandapName || '').localeCompare(b.mandapId?.mandapName || '');
           break;
         case 'totalAmount':
           comparison = a.totalAmount - b.totalAmount;
@@ -112,6 +133,14 @@ const BookingsPage: React.FC = () => {
     console.log(`View booking details: ${id}`);
     // In a real app, this would navigate to a booking details page
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -164,29 +193,29 @@ const BookingsPage: React.FC = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-500">ID</th>
                   <th 
                     className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer"
-                    onClick={() => handleSort('mandapName')}
+                    onClick={() => handleSort('mandapId.mandapName')}
                   >
                     <div className="flex items-center">
                       Mandap
-                      {sortIcon('mandapName')}
+                      {sortIcon('mandapId.mandapName')}
                     </div>
                   </th>
                   <th 
                     className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer"
-                    onClick={() => handleSort('customerName')}
+                    onClick={() => handleSort('userId.name')}
                   >
                     <div className="flex items-center">
                       Customer
-                      {sortIcon('customerName')}
+                      {sortIcon('userId.name')}
                     </div>
                   </th>
                   <th 
                     className="px-4 py-3 text-left font-medium text-gray-500 cursor-pointer"
-                    onClick={() => handleSort('startDate')}
+                    onClick={() => handleSort('createdAt')}
                   >
                     <div className="flex items-center">
-                      Date
-                      {sortIcon('startDate')}
+                      Booking Date
+                      {sortIcon('createdAt')}
                     </div>
                   </th>
                   <th 
@@ -207,24 +236,24 @@ const BookingsPage: React.FC = () => {
                 {filteredBookings.map((booking) => (
                   <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-4 font-medium">#{booking.id}</td>
-                    <td className="px-4 py-4">{booking.mandapName}</td>
+                    <td className="px-4 py-4">{booking.mandapId?.mandapName || 'N/A'}</td>
                     <td className="px-4 py-4">
                       <div>
-                        <p className="font-medium">{booking.customerName}</p>
-                        <p className="text-xs text-gray-500">{booking.customerEmail}</p>
+                        <p className="font-medium">{booking.userId?.name || 'N/A'}</p>
+                        <p className="text-xs text-gray-500">{booking.userId?.email || 'N/A'}</p>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                        <span>{format(new Date(booking.startDate), 'dd MMM yyyy')}</span>
+                        <span>{format(new Date(booking.createdAt), 'dd MMM yyyy')}</span>
                       </div>
                     </td>
                     <td className="px-4 py-4 font-medium">₹{booking.totalAmount.toLocaleString()}</td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                        {getStatusIcon(booking.status)}
-                        <span className="ml-1 capitalize">{booking.status}</span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor('confirmed')}`}>
+                        {getStatusIcon('confirmed')}
+                        <span className="ml-1 capitalize">Confirmed</span>
                       </span>
                     </td>
                     <td className="px-4 py-4">
@@ -236,7 +265,7 @@ const BookingsPage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleViewDetails(booking.id)}
+                        onClick={() => handleViewDetails(booking._id)}
                         icon={<Eye className="h-4 w-4" />}
                       >
                         View

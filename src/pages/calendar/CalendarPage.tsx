@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import { Calendar, Views, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { bookings, blockedDates } from '../../utils/mock-data';
+import { getBookingsByProvider } from '../../services/bookingApi';
 
 const localizer = momentLocalizer(moment);
 
@@ -21,26 +21,38 @@ interface Event {
 
 const CalendarPage: React.FC = () => {
   const [view, setView] = useState('month');
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const bookingsData = await getBookingsByProvider();
+      setBookings(bookingsData);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
   
   // Convert bookings to calendar events
   const bookingEvents: Event[] = bookings.map((booking) => ({
-    id: booking.id,
-    title: `${booking.mandapName} - ${booking.customerName}`,
-    start: new Date(booking.startDate),
-    end: new Date(booking.endDate),
+    id: booking._id,
+    title: `${booking.mandapId?.mandapName || 'Mandap'} - ${booking.userId?.name || 'Customer'}`,
+    start: new Date(booking.orderDates?.[0] || booking.createdAt),
+    end: new Date(booking.orderDates?.[booking.orderDates.length - 1] || booking.createdAt),
     type: 'booking',
-    status: booking.status,
-    customer: booking.customerName,
+    status: 'confirmed',
+    customer: booking.userId?.name,
   }));
   
   // Convert blocked dates to calendar events
-  const blockedEvents: Event[] = blockedDates.map((blocked) => ({
-    id: blocked.id,
-    title: `Blocked: ${blocked.reason}`,
-    start: new Date(blocked.startDate),
-    end: new Date(blocked.endDate),
-    type: 'blocked',
-  }));
+  const blockedEvents: Event[] = []; // This would come from API if implemented
   
   // Combine all events
   const events = [...bookingEvents, ...blockedEvents];
@@ -78,6 +90,14 @@ const CalendarPage: React.FC = () => {
     return { style };
   };
   
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

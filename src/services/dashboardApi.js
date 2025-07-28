@@ -17,45 +17,41 @@ api.interceptors.request.use((config) => {
   if (providerToken) {
     config.headers.Authorization = `Bearer ${providerToken}`;
   }
-  if (config.data instanceof FormData) {
-    config.headers["Content-Type"] = "multipart/form-data";
-  }
   return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("Review API Error:", error.response || error.message);
+    console.error("Dashboard API Error:", error.response || error.message);
     // Don't show toast for network errors as requested
     return Promise.reject(error);
   }
 );
 
-// Review APIs
-export const getReviewsByMandapId = async (mandapId) => {
+// Dashboard Analytics APIs
+export const getDashboardAnalytics = async () => {
   try {
-    const response = await api.get(`/provider/get-review/${mandapId}`);
-    return response.data.data.reviews || [];
+    const response = await api.get("/provider/dashboard-analytics");
+    return response.data.data;
   } catch (error) {
-    return [];
+    // Return mock data on error
+    return {
+      totalBookings: 0,
+      totalRevenue: 0,
+      pendingBookings: 0,
+      completedBookings: 0,
+      monthlyData: []
+    };
   }
 };
 
-export const getAllReviewsByProvider = async () => {
+export const getMonthlyChartData = async () => {
   try {
-    const response = await api.get(`/provider/get-all-reviews`);
-    return response.data.data.reviews || [];
+    const response = await api.get("/provider/monthly-chart-data");
+    return response.data.data;
   } catch (error) {
+    // Return mock data on error
     return [];
-  }
-};
-
-export const getReviewById = async (reviewId) => {
-  try {
-    const response = await api.get(`/review/${reviewId}`);
-    return response.data.data.review;
-  } catch (error) {
-    return null;
   }
 };

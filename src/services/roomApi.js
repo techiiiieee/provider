@@ -1,8 +1,10 @@
+import axios from "axios";
 import toast from "react-hot-toast";
-import { getProviderToken } from "./providerCookieUtils";
+import { getProviderToken } from "../utils/providerCookieUtils";
 
 const BASE_URL = "http://localhost:4000/api";
-const providerApi = axios.create({
+
+const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
   headers: {
@@ -10,7 +12,7 @@ const providerApi = axios.create({
   },
 });
 
-providerApi.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const providerToken = getProviderToken();
   if (providerToken) {
     config.headers.Authorization = `Bearer ${providerToken}`;
@@ -21,15 +23,11 @@ providerApi.interceptors.request.use((config) => {
   return config;
 });
 
-providerApi.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("Caterer API Error:", error.response || error.message);
-    if (error.response?.data?.error) {
-      toast.error(error.response.data.error);
-    } else if (error.message) {
-      toast.error("Network error. Please try again.");
-    }
+    console.error("Room API Error:", error.response || error.message);
+    // Don't show toast for network errors as requested
     return Promise.reject(error);
   }
 );
@@ -52,8 +50,17 @@ export const addRoom = async (
       formData.append("nonAcRoomImages", image)
     );
   }
-  const response = await api.post("/add-room", formData);
+  const response = await api.post("/provider/add-room", formData);
   return response.data;
+};
+
+export const getAllRooms = async () => {
+  try {
+    const response = await api.get("/provider/get-all-rooms");
+    return response.data.data.rooms || [];
+  } catch (error) {
+    return [];
+  }
 };
 
 export const updateRoom = async (
@@ -73,16 +80,16 @@ export const updateRoom = async (
       formData.append("nonAcRoomImages", image)
     );
   }
-  const response = await api.put(`/update-room/${roomId}`, formData);
+  const response = await api.put(`/provider/update-room/${roomId}`, formData);
   return response.data;
 };
 
 export const deleteRoom = async (roomId) => {
-  const response = await api.delete(`/delete-room/${roomId}`);
+  const response = await api.delete(`/provider/delete-room/${roomId}`);
   return response.data;
 };
 
 export const getRoomById = async (roomId) => {
-  const response = await api.get(`/get-room/${roomId}`);
+  const response = await api.get(`/provider/get-room/${roomId}`);
   return response.data;
 };

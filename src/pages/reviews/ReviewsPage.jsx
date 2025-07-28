@@ -10,6 +10,8 @@ import {
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import Select from "../../components/ui/Select";
+import { getReviewsByMandapId, getAllReviewsByProvider } from "../../services/reviewApi";
+import { getProviderMandaps } from "../../services/mandapApi";
 import { format } from "date-fns";
 
 export default function ReviewsPage() {
@@ -17,63 +19,48 @@ export default function ReviewsPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
+  const [reviews, setReviews] = useState([]);
+  const [mandaps, setMandaps] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for reviews
-  const reviews = [
-    {
-      id: "1",
-      mandapId: "1",
-      userId: "u1",
-      userName: "Priya Sharma",
-      rating: 5,
-      comment:
-        "Beautiful venue with excellent amenities. The staff was very helpful and professional.",
-      createdAt: "2024-02-15T10:30:00Z",
-    },
-    {
-      id: "2",
-      mandapId: "1",
-      userId: "u2",
-      userName: "Rahul Verma",
-      rating: 4,
-      comment:
-        "Great location and beautiful decor. Slightly expensive but worth it.",
-      createdAt: "2024-02-10T15:20:00Z",
-    },
-    {
-      id: "3",
-      mandapId: "2",
-      userId: "u3",
-      userName: "Anjali Patel",
-      rating: 5,
-      comment: "Perfect venue for our wedding. The banquet hall is stunning!",
-      createdAt: "2024-02-05T09:15:00Z",
-    },
-  ];
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      let reviewsData = [];
+      let mandapsData = [];
+      
+      if (id) {
+        // Fetch reviews for specific mandap
+        reviewsData = await getReviewsByMandapId(id);
+        mandapsData = await getProviderMandaps();
+      } else {
+        // Fetch all reviews for provider
+        reviewsData = await getAllReviewsByProvider();
+        mandapsData = await getProviderMandaps();
+      }
+      
+      setReviews(reviewsData);
+      setMandaps(mandapsData);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Mock mandaps data
-  const mandaps = [
-    {
-      id: "1",
-      mandapName: "Laxmi Garden",
-      name: "Laxmi Garden",
-    },
-    {
-      id: "2",
-      mandapName: "Royal Banquet",
-      name: "Royal Banquet",
-    },
-  ];
+  useEffect(() => {
+    fetchReviews();
+  }, [id]);
 
   // Filter reviews based on mandap ID if provided
   let filteredReviews = reviews.filter((review) => {
-    if (id && review.mandapId !== id) return false;
+    if (id && review.mandapId?._id !== id) return false;
 
     // Find the mandap for the current review
-    const reviewMandap = mandaps.find((m) => m.id === review.mandapId);
+    const reviewMandap = mandaps.find((m) => m._id === review.mandapId?._id);
 
     const matchesSearch =
-      review.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (review.userId?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       review.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (reviewMandap &&
         (reviewMandap.mandapName || reviewMandap.name)
@@ -86,7 +73,7 @@ export default function ReviewsPage() {
     return matchesSearch && matchesRating;
   });
 
-  const mandap = id ? mandaps.find((m) => m.id === id) : null;
+  const mandap = id ? mandaps.find((m) => m._id === id) : null;
   const averageRating =
     filteredReviews.length > 0
       ? filteredReviews.reduce((acc, curr) => acc + curr.rating, 0) /
@@ -102,6 +89,14 @@ export default function ReviewsPage() {
   };
 
   const ratingDistribution = getRatingDistribution();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -225,15 +220,15 @@ export default function ReviewsPage() {
       ) : (
         <div className="space-y-4">
           {filteredReviews.map((review) => {
-            const reviewMandap = mandaps.find((m) => m.id === review.mandapId);
+            const reviewMandap = mandaps.find((m) => m._id === review.mandapId?._id);
             return (
-              <Card key={review.id}>
+              <Card key={review._id}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-gray-900">
-                          {review.userName}
+                          {review.userId?.name || 'Anonymous'}
                         </h3>
                         <div className="flex items-center">
                           {[...Array(5)].map((_, index) => (

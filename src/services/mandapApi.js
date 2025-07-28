@@ -4,7 +4,7 @@ import { getProviderToken } from "../utils/providerCookieUtils";
 
 const BASE_URL = "http://localhost:4000/api";
 
-const providerApi = axios.create({
+const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
   headers: {
@@ -12,7 +12,7 @@ const providerApi = axios.create({
   },
 });
 
-providerApi.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const providerToken = getProviderToken();
   if (providerToken) {
     config.headers.Authorization = `Bearer ${providerToken}`;
@@ -23,15 +23,11 @@ providerApi.interceptors.request.use((config) => {
   return config;
 });
 
-providerApi.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("Mandap API Error:", error.response || error.message);
-    if (error.response?.data?.error) {
-      toast.error(error.response.data.error);
-    } else if (error.message) {
-      toast.error("Network error. Please try again.");
-    }
+    // Don't show toast for network errors as requested
     return Promise.reject(error);
   }
 );
@@ -89,8 +85,12 @@ export const createMandap = async (
 };
 
 export const getProviderMandaps = async () => {
-  const response = await api.get("/get-mandap");
-  return response.data;
+  try {
+    const response = await api.get("/provider/get-mandap");
+    return response.data.data.mandaps || [];
+  } catch (error) {
+    return [];
+  }
 };
 
 export const updateMandap = async (mandapId, mandapData, venueImages) => {
@@ -110,11 +110,11 @@ export const updateMandap = async (mandapId, mandapData, venueImages) => {
 };
 
 export const deleteMandap = async (mandapId) => {
-  const response = await api.delete(`/delete-mandap/${mandapId}`);
+  const response = await api.delete(`/provider/delete-mandap/${mandapId}`);
   return response.data;
 };
 
 export const getMandapById = async (mandapId) => {
-  const response = await api.get(`/mandap/get-mandap/${mandapId}`);
+  const response = await api.get(`/mandap/${mandapId}`);
   return response.data;
 };

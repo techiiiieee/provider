@@ -1,53 +1,37 @@
 import React, { useState, useEffect } from 'react';
+import { getProviderMandaps } from '../../services/mandapApi';
 import MandapCard from '../../components/mandap/MandapCard';
 
 const MandapsListPage = () => {
   const [mandaps, setMandaps] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+
+  const fetchMandaps = async () => {
+    try {
+      setLoading(true);
+      const mandapsData = await getProviderMandaps();
+      setMandaps(mandapsData);
+    } catch (error) {
+      console.error("Error fetching mandaps:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Mock data - replace with actual API call
-    const mockMandaps = [
-      {
-        id: 1,
-        mandapName: 'Royal Wedding Hall',
-        description: 'Elegant venue for grand celebrations',
-        address: { city: 'Mumbai' },
-        guestCapacity: 500,
-        price: 50000,
-        images: ['https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg']
-      },
-      {
-        id: 2,
-        mandapName: 'Garden Paradise',
-        description: 'Beautiful outdoor wedding venue',
-        address: { city: 'Delhi' },
-        guestCapacity: 300,
-        price: 35000,
-        images: ['https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg']
-      },
-      {
-        id: 3,
-        mandapName: 'Heritage Palace',
-        description: 'Traditional venue with modern amenities',
-        address: { city: 'Jaipur' },
-        guestCapacity: 150,
-        price: 25000,
-        images: ['https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg']
-      }
-    ];
-    setMandaps(mockMandaps);
+    fetchMandaps();
   }, []);
 
   const handleDelete = (mandapId) => {
-    setMandaps(prevMandaps => prevMandaps.filter(mandap => mandap.id !== mandapId));
+    setMandaps(prevMandaps => prevMandaps.filter(mandap => mandap._id !== mandapId));
   };
 
   const filteredMandaps = mandaps.filter(mandap => {
-    const matchesSearch = mandap.mandapName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          mandap.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          mandap.address.city.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (mandap.mandapName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (mandap.mandapDesc || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (mandap.address?.city || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     if (filter === 'all') return matchesSearch;
     if (filter === 'high-capacity' && mandap.guestCapacity >= 400) return matchesSearch;
@@ -56,6 +40,14 @@ const MandapsListPage = () => {
     
     return false;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -86,7 +78,7 @@ const MandapsListPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredMandaps.map(mandap => (
-          <MandapCard key={mandap.id} mandap={mandap} onDelete={handleDelete} />
+          <MandapCard key={mandap._id} mandap={mandap} onDelete={handleDelete} />
         ))}
       </div>
 
